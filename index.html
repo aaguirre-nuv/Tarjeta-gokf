@@ -5,6 +5,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Tarjeta">
 <meta name="theme-color" content="#0D211B">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -113,14 +115,25 @@ main{padding:14px 12px 0;max-width:560px;margin:0 auto}
 .leader .ltot{color:var(--yellow)}
 
 /* tarjeta */
-table{width:100%;border-collapse:collapse;font-size:14px}
-th,td{padding:7px 4px;text-align:center;border-bottom:1px solid var(--line)}
-th{font-family:var(--disp);font-weight:600;letter-spacing:.08em;text-transform:uppercase;font-size:11px;color:var(--muted)}
-td.h{font-family:var(--disp);font-weight:700;font-size:16px;text-align:left;padding-left:8px}
-td.par{color:var(--muted);font-size:12px}
+table{width:100%;border-collapse:collapse}
+th,td{padding:7px 3px;text-align:center;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--disp);font-weight:600;letter-spacing:.08em;text-transform:uppercase;font-size:11px;color:var(--muted);padding-bottom:9px}
+th.hh{text-align:left;padding-left:8px}
+td.h{font-family:var(--disp);font-weight:700;font-size:17px;text-align:left;padding-left:8px;white-space:nowrap;line-height:1.1}
+td.h .hm{font-family:var(--body);font-size:10px;font-weight:600;color:var(--muted);letter-spacing:.02em;margin-left:5px}
+.pt{font-family:var(--disp);font-weight:700;font-size:21px;line-height:1}
+.sub{display:flex;gap:4px;justify-content:center;align-items:center;margin-top:3px;font-size:10px;min-height:14px}
+.sub .g{color:var(--muted);font-weight:500}
+.acc{padding:1px 4px;border-radius:4px;font-weight:700;letter-spacing:.01em}
+.acc.over{background:rgba(226,72,59,.2);color:#F2938A}
+.acc.under{background:var(--yellow);color:#14261C}
+.acc.even{background:var(--line);color:var(--muted)}
 tr.now{background:rgba(245,197,24,.09)}
-tr.tot td{font-family:var(--disp);font-weight:700;font-size:17px;color:var(--yellow);border-bottom:2px solid var(--line)}
-.gross{color:var(--muted);font-size:11px}
+tr.sum td{background:rgba(255,255,255,.035);border-bottom:1px solid var(--line)}
+tr.sum td.h,tr.sum .pt{color:var(--muted);font-size:15px}
+tr.tot td{border-bottom:none;border-top:2px solid var(--line);padding-top:9px}
+tr.tot .pt{color:var(--yellow);font-size:24px}
+tr.tot td.h{color:var(--yellow);font-size:15px}
 
 /* ajustes */
 .card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:12px}
@@ -213,7 +226,7 @@ nav button.on{color:var(--yellow);border-top-color:var(--yellow)}
     <div class="card" style="padding:6px 4px">
       <table id="cardTable"></table>
     </div>
-    <p class="note">El número grande son los puntos de la modalidad. Debajo, en pequeño, los golpes brutos.</p>
+    <p class="note" id="cardLegend"></p>
   </section>
 
   <!-- ===== VISTA AJUSTES ===== -->
@@ -486,27 +499,53 @@ function pintaLead(){
 
 function pintaTarjeta(){
   const A=act();
-  let html='<thead><tr><th>H</th>'+A.map(p=>`<th>${esc((p.name||'J'+(p.i+1)).slice(0,7))}</th>`).join('')+'</tr></thead><tbody>';
-  const tot={}; A.forEach(p=>tot[p.i]=0);
+  let html='<thead><tr><th class="hh">Hoyo</th>'+A.map(p=>`<th>${esc((p.name||'J'+(p.i+1)).slice(0,8))}</th>`).join('')+'</tr></thead><tbody>';
+  const tot={}, gtot={}, acc={}, snap={};
+  A.forEach(p=>{tot[p.i]=0; gtot[p.i]=0; acc[p.i]=0;});
   let bote=1;
+
+  const badge=v=>`<span class="acc ${v<0?'under':v>0?'over':'even'}">${v>0?'+':v===0?'E':''}${v!==0?v:''}</span>`;
+  const fila=(lab,sub)=>{
+    return `<tr class="sum"><td class="h">${lab}</td>`+A.map(p=>{
+      const d=sub?acc[p.i]-snap[p.i]:acc[p.i], g=sub?gtot[p.i]-snap['g'+p.i]:gtot[p.i];
+      return `<td><div class="pt">${Math.round((sub?tot[p.i]-snap['p'+p.i]:tot[p.i])*10)/10}</div>
+        <div class="sub"><span class="g">${g||''}</span>${badge(d)}</div></td>`;
+    }).join('')+'</tr>';
+  };
+
   for(let h=0;h<18;h++){
     const P=puntosHoyo(h);
     let cell={};
     if(P){
       if(S.mode==='skins'){
-        const g=Object.keys(P).find(k=>P[k]===1);
-        if(g!=null){ cell[g]=bote; tot[g]+=bote; bote=1; } else { bote++; }
+        const w=Object.keys(P).find(k=>P[k]===1);
+        if(w!=null){ cell[w]=bote; tot[w]+=bote; bote=1; } else { bote++; }
       } else { A.forEach(p=>{ cell[p.i]=P[p.i]||0; tot[p.i]+=P[p.i]||0; }); }
     }
-    html+=`<tr class="${h===S.hole?'now':''}"><td class="h">${h+1}<div class="par">p${S.par[h]}</div></td>`+
+    html+=`<tr class="${h===S.hole?'now':''}">
+      <td class="h">${h+1}<span class="hm">p${S.par[h]} · h${S.si[h]}</span></td>`+
       A.map(p=>{
         const g=S.scores[h][p.i];
-        const v=cell[p.i]!=null?Math.round(cell[p.i]*10)/10:'';
-        return `<td><b>${v===''?'·':v}</b><div class="gross">${g==null?'':g}</div></td>`;
+        if(g!=null){ gtot[p.i]+=g; acc[p.i]+= (g-recibidos(p.hcp,S.si[h])) - S.par[h]; }
+        const v=cell[p.i]!=null?Math.round(cell[p.i]*10)/10:null;
+        return `<td><div class="pt">${v==null?'·':v}</div>`+
+          (g==null?'<div class="sub"></div>':`<div class="sub"><span class="g">${g}</span>${badge(acc[p.i])}</div>`)+
+          '</td>';
       }).join('')+'</tr>';
+    if(h===8){
+      A.forEach(p=>{snap[p.i]=acc[p.i]; snap['g'+p.i]=gtot[p.i]; snap['p'+p.i]=tot[p.i];});
+      html+=fila('Ida',false);
+    }
   }
-  html+=`<tr class="tot"><td class="h">Tot</td>`+A.map(p=>`<td>${Math.round(tot[p.i]*10)/10}</td>`).join('')+'</tr></tbody>';
+  html+=fila('Vta',true);
+  html+=`<tr class="tot"><td class="h">Total</td>`+A.map(p=>
+    `<td><div class="pt">${Math.round(tot[p.i]*10)/10}</div>
+     <div class="sub"><span class="g">${gtot[p.i]||''}</span>${badge(acc[p.i])}</div></td>`).join('')+'</tr></tbody>';
   document.getElementById('cardTable').innerHTML=html;
+  const lg=document.getElementById('cardLegend');
+  if(lg) lg.innerHTML='En grande, los puntos de la modalidad. Debajo, los golpes del hoyo y a su lado el '+
+    (S.net?'<b>neto acumulado</b> sobre el par':'<b>acumulado bruto</b> sobre el par')+
+    ' hasta ese hoyo. E significa que vas justo al par.';
 }
 
 function pintaAjustes(){
