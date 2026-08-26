@@ -115,6 +115,21 @@ main{padding:14px 12px 0;max-width:560px;margin:0 auto}
 .leader .ltot{color:var(--yellow)}
 
 /* tarjeta */
+.pjc{padding:0}
+.pjrow{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line)}
+.pjrow.win{background:rgba(245,197,24,.08)}
+.pjn{flex:1;font-family:var(--disp);font-weight:700;font-size:19px;line-height:1.15;min-width:0}
+.pjn small{display:block;font-family:var(--body);font-weight:500;font-size:11px;
+  color:var(--muted);letter-spacing:.02em;margin-top:2px}
+.verde{display:inline-block;margin-left:7px;font-family:var(--body);font-size:9px;font-weight:700;
+  letter-spacing:.1em;text-transform:uppercase;color:#9ADf7A;border:1px solid rgba(154,223,122,.5);
+  border-radius:5px;padding:1px 5px;vertical-align:middle}
+.pjh{flex:0 0 34px;text-align:right;font-family:var(--disp);font-weight:700;font-size:17px;color:var(--muted)}
+.pjt{flex:0 0 40px;text-align:right;font-family:var(--disp);font-weight:700;font-size:27px;color:var(--yellow);line-height:1}
+.pjft{padding:9px 14px;font-size:12px;color:var(--muted);border-bottom:1px solid var(--line);line-height:1.4}
+.pjft:last-child{border-bottom:none}
+.pjft b{color:var(--text)}
+
 /* tarjeta: clasificación + detalle desplegable */
 .lbh{display:flex;align-items:center;gap:8px;padding:2px 10px 8px;
   font-family:var(--disp);font-weight:600;letter-spacing:.12em;text-transform:uppercase;
@@ -181,8 +196,8 @@ label{display:block;font-size:12px;letter-spacing:.1em;text-transform:uppercase;
 .two{display:flex;gap:10px}
 .two>*{flex:1}
 .slot{display:flex;gap:10px;align-items:flex-end;margin-bottom:10px}
-.slot .n{flex:1}
-.slot .h{flex:0 0 92px}
+.slot .nn{flex:1}
+.slot .hh{flex:0 0 92px}
 .slot .x{flex:0 0 46px;height:44px;border-radius:10px;background:var(--surface2);border:1px solid var(--line);font-size:18px;color:var(--muted)}
 .modes{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .mode{
@@ -204,6 +219,7 @@ label{display:block;font-size:12px;letter-spacing:.1em;text-transform:uppercase;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;
 }
 .chip.on{background:var(--yellow);color:#14261C;border-color:var(--yellow)}
+.chips.wrap .chip{flex:1 1 100%;font-size:14px}
 .bbbrow{margin-bottom:14px}
 .bbbrow .lab{font-family:var(--disp);font-weight:600;letter-spacing:.1em;text-transform:uppercase;font-size:12px;color:var(--muted);margin-bottom:6px}
 .danger{width:100%;padding:13px;border-radius:12px;background:transparent;border:1px solid var(--flag);color:#F2938A;font-weight:600}
@@ -253,7 +269,8 @@ nav button.on{color:var(--yellow);border-top-color:var(--yellow)}
   <section id="view-hoyo">
     <div id="players"></div>
     <div id="bbbBox" class="hidden"></div>
-    <div class="sect-title">Clasificación</div>
+    <div id="pjBox"></div>
+    <div class="sect-title" id="leadTitle">Clasificación</div>
     <div class="lead" id="lead"></div>
     <p class="note" id="holeNote"></p>
   </section>
@@ -275,9 +292,10 @@ nav button.on{color:var(--yellow);border-top-color:var(--yellow)}
     <div class="sect-title">Modalidad</div>
     <div class="card">
       <div class="modes" id="modeBtns"></div>
+      <div class="field hidden" id="pairBox" style="margin-top:14px"></div>
       <div class="toggle" style="margin-top:14px">
         <div>
-          <b style="font-weight:600">Jugar con hándicap</b>
+          <b style="font-weight:600" id="netTxt">Jugar con hándicap</b>
           <div class="note" style="margin:2px 0 0">Reparte los golpes por el hcp de cada hoyo</div>
         </div>
         <button class="sw" id="swNet" aria-label="Jugar con hándicap"><i></i></button>
@@ -312,17 +330,24 @@ const PAR_DEF = [4,5,3,4,4,3,4,5,4, 4,4,3,5,4,4,3,4,5];
 const SI_DEF  = [7,3,10,15,1,18,11,5,13, 8,14,16,2,4,12,17,6,9];
 
 const MODES = {
-  nueve:{n:'Nueve Puntos', d:'5-3-1 por hoyo', lbl:'Nueve Puntos'},
-  stable:{n:'Stableford', d:'Puntos sobre el par', lbl:'Stableford'},
-  skins:{n:'Skins', d:'Gana el hoyo o va bote', lbl:'Skins'},
-  bbb:{n:'Bingo Bango Bongo', d:'3 puntos por hoyo', lbl:'Bingo Bango Bongo'}
+  medal:{n:'Medal', d:'Gana quien menos golpes hace', unit:'golpes', low:true, min:2},
+  stable:{n:'Stableford', d:'Puntos sobre el par', unit:'ptos', min:2},
+  nueve:{n:'Nueve Puntos', d:'5-3-1 por hoyo', unit:'ptos', min:3},
+  skins:{n:'Skins', d:'Gana el hoyo o va bote', unit:'skins', min:2},
+  bbb:{n:'Bingo Bango Bongo', d:'3 puntos por hoyo', unit:'ptos', min:2},
+  parejas:{n:'Parejas', d:'Mejor bola 2, peor bola 1', unit:'neto', low:true, min:4, max:4}
 };
+function modLabel(){
+  if(S.mode==='medal') return S.net?'Medal neto':'Medal scratch';
+  return MODES[S.mode].n+(S.net?'':' · bruto');
+}
+function modsOk(){ const n=act().length; return Object.entries(MODES).filter(([k,m])=>n>=m.min && n<=(m.max||4)); }
 
 let S = null;
 function fresh(){
   return {
     name:'Golf Santander · Amarillas',
-    mode:'nueve', net:true, hole:0, open:null,
+    mode:'nueve', net:true, hole:0, open:null, pairs:[[0,1],[2,3]],
     players:[
       {name:'Jugador 1', hcp:18, on:true},
       {name:'Jugador 2', hcp:18, on:true},
@@ -350,7 +375,7 @@ function save(){
 function load(){
   try{
     const v = localStorage.getItem('golf:partida');
-    if(v){ const p=JSON.parse(v); if(p && p.players) return p; }
+    if(v){ const p=JSON.parse(v); if(p && p.players){ if(!p.pairs) p.pairs=[[0,1],[2,3]]; return p; } }
   }catch(e){}
   return fresh();
 }
@@ -377,6 +402,11 @@ function puntosHoyo(h){
     const b=S.bbb[h];
     ['bingo','bango','bongo'].forEach(k=>{ if(b[k]!=null && out[b[k]]!=null) out[b[k]]++; });
     return (b.bingo==null&&b.bango==null&&b.bongo==null)?null:out;
+  }
+  if(S.mode==='medal'||S.mode==='parejas'){
+    let any=false;
+    A.forEach(p=>{ const nt=net(h,p.i); if(nt==null) out[p.i]=0; else { any=true; out[p.i]=nt; } });
+    return any?out:null;
   }
   if(S.mode==='stable'){
     let any=false;
@@ -424,6 +454,52 @@ function skinsDetalle(){
   return res;
 }
 
+// ---- juego por parejas: mejor bola 2 puntos, peor bola 1, y los verdes ----
+function parejasCalc(){
+  const [PA,PB]=S.pairs;
+  const res=[]; let ac=[0,0];
+  const tot=[{mb:0,pb:0,ex:0,pt:0,gan:0,emp:0},{mb:0,pb:0,ex:0,pt:0,gan:0,emp:0}];
+  for(let h=0;h<18;h++){
+    const nt=i=>net(h,i);
+    const na=[nt(PA[0]),nt(PA[1])], nb=[nt(PB[0]),nt(PB[1])];
+    if(na.some(v=>v==null)||nb.some(v=>v==null)){ res.push(null); continue; }
+    // quién firma la mejor y la peor bola de cada pareja (desempate por bruto)
+    const elige=(par,ns,peor)=>{
+      const k = ns[0]===ns[1]
+        ? ((S.scores[h][par[0]]<=S.scores[h][par[1]])!==!!peor ? 0 : 1)
+        : ((ns[0]<ns[1])!==!!peor ? 0 : 1);
+      return par[k];
+    };
+    const mb=[Math.min(...na),Math.min(...nb)], pb=[Math.max(...na),Math.max(...nb)];
+    const qMB=[elige(PA,na,0),elige(PB,nb,0)], qPB=[elige(PA,na,1),elige(PB,nb,1)];
+    const winMB = mb[0]<mb[1]?0:mb[1]<mb[0]?1:-1;
+    const winPB = pb[0]<pb[1]?0:pb[1]<pb[0]?1:-1;
+    const p=[0,0], ex=[0,0];
+    if(winMB>=0) p[winMB]+=2;
+    if(winPB>=0) p[winPB]+=1;
+    // la opción de los verdes es de la pareja que va por detrás al llegar al hoyo
+    const opc = ac[0]<ac[1]?0:ac[1]<ac[0]?1:-1;
+    if(opc>=0){
+      if(winMB===opc && S.scores[h][qMB[opc]]-S.par[h] < 0) ex[opc]++;
+      if(winPB===opc && S.scores[h][qPB[opc]]-S.par[h] < 0) ex[opc]++;
+    }
+    p[0]+=ex[0]; p[1]+=ex[1];
+    ac=[ac[0]+p[0],ac[1]+p[1]];
+    [0,1].forEach(k=>{
+      tot[k].pt+=p[k]; tot[k].ex+=ex[k];
+      if(winMB===k) tot[k].mb+=2;
+      if(winPB===k) tot[k].pb+=1;
+    });
+    const g = p[0]>p[1]?0:p[1]>p[0]?1:-1;
+    if(g>=0) tot[g].gan++; else { tot[0].emp++; tot[1].emp++; }
+    res.push({p,ex,ac:[...ac],mb,pb,qMB,qPB,winMB,winPB,opc});
+  }
+  return {res,tot,ac};
+}
+function nombrePareja(k){
+  return S.pairs[k].map(i=>corto(S.players[i]?{...S.players[i],i}:{i}).split(' ')[0]).join(' + ');
+}
+
 function totales(){
   const A=act(); const t={}; A.forEach(p=>t[p.i]=0);
   let bote=1;
@@ -453,7 +529,7 @@ function pintaHoyo(){
   document.getElementById('holeSi').textContent='Hcp '+S.si[h];
   document.getElementById('prevH').disabled = h===0;
   document.getElementById('nextH').disabled = h===17;
-  document.getElementById('modeLabel').textContent=MODES[S.mode].lbl+(S.net?'':' · bruto');
+  document.getElementById('modeLabel').textContent=modLabel();
   document.getElementById('courseName').textContent=S.name;
 
   const P=puntosHoyo(h);
@@ -475,7 +551,7 @@ function pintaHoyo(){
           <div class="pname">${esc(p.name||'Jugador '+(p.i+1))}</div>
           <div class="ptag">Hcp ${p.hcp} ${rec>0?'<span class="dots">'+'•'.repeat(Math.min(rec,4))+'</span>':rec<0?'<span class="dots">−1</span>':''}</div>
         </div>
-        <div class="hpts">${pts}<small>${S.mode==='skins'?'skin':'ptos'}</small></div>
+        <div class="hpts">${pts}<small>${MODES[S.mode].unit}</small></div>
       </div>
       <div class="stepper">
         <button class="step" data-m="-1" data-p="${p.i}">−</button>
@@ -508,19 +584,47 @@ function pintaHoyo(){
     });
   }
 
+  const pj=document.getElementById('pjBox');
+  if(S.mode==='parejas' && act().length===4){
+    const {res,tot,ac}=parejasCalc(); const r=res[h];
+    const vent = ac[0]===ac[1]?'Empate':(ac[0]>ac[1]?nombrePareja(0):nombrePareja(1))+' +'+Math.abs(ac[0]-ac[1]);
+    pj.innerHTML='<div class="sect-title">Parejas</div><div class="card pjc">'+
+      [0,1].map(k=>{
+        const opc = r? r.opc===k : (ac[k]<ac[1-k]);
+        return `<div class="pjrow ${r&&r.p[k]>r.p[1-k]?'win':''}">
+          <div class="pjn">${esc(nombrePareja(k))}${opc?'<span class="verde">verdes</span>':''}</div>
+          <div class="pjh">${r?(r.p[k]?'+'+r.p[k]:'0'):'—'}</div>
+          <div class="pjt">${ac[k]}</div></div>`;
+      }).join('')+
+      `<div class="pjft">${r?detalleHoyo(r):'Faltan golpes por meter en este hoyo'}</div>`+
+      `<div class="pjft"><b>${esc(vent)}</b></div></div>`;
+  } else pj.innerHTML='';
   pintaLead();
   const {bote}=totales();
   const nota=document.getElementById('holeNote');
   if(S.mode==='skins') nota.textContent = bote>1 ? `Bote acumulado: el próximo hoyo que alguien gane en solitario vale ${bote} skins.` : 'Si dos o más empatan el hoyo, el skin va al bote.';
   else if(S.mode==='nueve') nota.textContent='Se reparten '+(act().length===3?'9 puntos: 5 al mejor, 3 al segundo, 1 al tercero. Los empates se promedian.':'los puntos por orden. Los empates se promedian.');
   else if(S.mode==='stable') nota.textContent='Par neto = 2 puntos. Birdie 3, bogey 1, doble o peor 0.';
-  else nota.textContent='Un punto por cada uno de los tres premios del hoyo.';
+  else if(S.mode==='bbb') nota.textContent='Un punto por cada uno de los tres premios del hoyo.';
+  else nota.textContent = S.net
+    ? 'Juego por golpes: se descuentan los golpes de hándicap en cada hoyo y gana el total más bajo.'
+    : 'Juego por golpes en scratch: cuentan los golpes brutos, sin hándicap.';
 }
 
+function detalleHoyo(r){
+  const t=[];
+  t.push('Mejor bola '+(r.winMB<0?'empatada ('+r.mb[0]+')':nombrePareja(r.winMB)+' '+Math.min(...r.mb)+' a '+Math.max(...r.mb)));
+  t.push('peor bola '+(r.winPB<0?'empatada ('+r.pb[0]+')':nombrePareja(r.winPB)+' '+Math.min(...r.pb)+' a '+Math.max(...r.pb)));
+  if(r.ex[0]||r.ex[1]) t.push('verde de '+nombrePareja(r.ex[0]?0:1)+' +'+(r.ex[0]||r.ex[1]));
+  return t.join(' · ');
+}
 function pintaLead(){
   const {t}=totales(); const A=act();
-  const arr=A.map(p=>({...p,pts:t[p.i]||0})).sort((a,b)=>b.pts-a.pts);
+  const low=!!MODES[S.mode].low;
+  document.getElementById('leadTitle').textContent = S.mode==='parejas'?'Golpes netos':'Clasificación';
+  const arr=A.map(p=>({...p,pts:t[p.i]||0})).sort((a,b)=>low?(a.pts||1e9)-(b.pts||1e9):b.pts-a.pts);
   const max=Math.max(1,...arr.map(a=>a.pts));
+  const min=Math.min(...arr.map(a=>a.pts||1e9));
   document.getElementById('lead').innerHTML=arr.map((p,k)=>{
     const {g,n}=golpesTot(p.i);
     return `<div class="lrow ${k===0&&p.pts>0?'leader':''}">
@@ -529,7 +633,7 @@ function pintaLead(){
         <div class="lname">${esc(p.name||'Jugador '+(p.i+1))}</div>
         <div class="ptag">${n?g+' golpes en '+n+' hoyos':'sin golpes'}</div>
       </div>
-      <div class="lbarwrap"><div class="lbar" style="width:${Math.round(p.pts/max*100)}%"></div></div>
+      <div class="lbarwrap"><div class="lbar" style="width:${p.pts?Math.round(low?min/p.pts*100:p.pts/max*100):0}%"></div></div>
       <div class="ltot">${Math.round(p.pts*10)/10}</div>
     </div>`;
   }).join('');
@@ -567,7 +671,10 @@ function pintaTarjeta(){
     }
     return {...p,g,pt,net,bru,n};
   });
-  const orden=[...st].sort((a,b)=>b.pt-a.pt || a.net-b.net);
+  const low=!!MODES[S.mode].low;
+  const orden=[...st].sort((a,b)=> low
+    ? (a.n?a.pt:1e9)-(b.n?b.pt:1e9)
+    : (b.pt-a.pt || a.net-b.net));
 
   // ---- detalle de un jugador: dos bloques de nueve ----
   const bloque=(p,a,b,lab)=>{
@@ -589,7 +696,7 @@ function pintaTarjeta(){
         (v==null?'<div class="gs">·</div>':`<div class="gs ${marca(v,S.par[h])}">${v}</div>`)+'</td>';
     }
     t+=`<td class="tt"><div class="gs">${g||''}</div></td></tr>`;
-    t+='<tr class="pu"><td class="lb">Puntos</td>';
+    t+=`<tr class="pu"><td class="lb">${S.mode==='medal'?(S.net?'Neto':'Bruto'):'Puntos'}</td>`;
     for(let h=a;h<b;h++){
       const q=pts[h][p.i]; if(q!=null) pt+=q;
       t+=`<td class="${h===S.hole?'now':''}">${q==null?'':Math.round(q*10)/10}</td>`;
@@ -598,14 +705,27 @@ function pintaTarjeta(){
   };
 
   // ---- clasificación ----
-  let html='<div class="lbh"><span class="pos">#</span><span class="who">Jugador</span>'+
-    `<span class="res">${S.mode==='skins'?'Skins':'Ptos'}</span><span class="ap">Al par</span><span class="en">En</span><span class="car"></span></div>`;
+  let html='';
+  if(S.mode==='parejas' && A.length===4){
+    const {tot,ac}=parejasCalc();
+    html+='<div class="pjc">'+[0,1].map(k=>`
+      <div class="pjrow ${ac[k]>ac[1-k]?'win':''}">
+        <div class="pjn">${esc(nombrePareja(k))}
+          <small>${tot[k].gan} hoyos ganados · ${tot[k].emp} empatados</small></div>
+        <div class="pjt">${ac[k]}</div>
+      </div>`).join('')+
+      '<div class="pjft">'+[0,1].map(k=>
+        `${esc(nombrePareja(k))}: mejor bola ${tot[k].mb} · peor bola ${tot[k].pb} · verdes ${tot[k].ex}`
+      ).join('<br>')+'</div></div>';
+  }
+  html+='<div class="lbh"><span class="pos">#</span><span class="who">Jugador</span>'+
+    `<span class="res">${MODES[S.mode].unit}</span><span class="ap">Al par</span><span class="en">En</span><span class="car"></span></div>`;
   orden.forEach((p,k)=>{
     const ab=S.open===p.i;
     html+=`<button class="lbrow ${ab?'open':''} ${k===0&&p.pt>0?'first':''}" data-o="${p.i}">`+
       `<span class="pos">${k+1}</span>`+
       `<span class="who"><b>${esc(corto(p))}</b><small>Hcp ${p.hcp}</small></span>`+
-      `<span class="res">${Math.round(p.pt*10)/10}</span>`+
+      `<span class="res">${p.n?Math.round(p.pt*10)/10:'–'}</span>`+
       `<span class="ap">${p.n?bdg(p.net):'<span class="net even">—</span>'}</span>`+
       `<span class="en">${p.n>=18?'F':p.n||'–'}</span>`+
       `<span class="car">${ab?'▴':'▾'}</span></button>`;
@@ -615,7 +735,7 @@ function pintaTarjeta(){
         `<div><small>Golpes</small><b>${p.g||'—'}</b></div>`+
         `<div><small>Bruto</small><b>${p.n?bdg(p.bru,'brt'):'—'}</b></div>`+
         `<div><small>Neto</small><b>${p.n?bdg(p.net):'—'}</b></div>`+
-        `<div><small>${S.mode==='skins'?'Skins':'Puntos'}</small><b class="y">${Math.round(p.pt*10)/10}</b></div>`+
+        `<div><small>${S.mode==='medal'?(S.net?'Neto':'Scratch'):MODES[S.mode].unit}</small><b class="y">${p.n?Math.round(p.pt*10)/10:'—'}</b></div>`+
         '</div></div>';
     }
   });
@@ -635,27 +755,48 @@ function pintaTarjeta(){
 }
 
 function pintaAjustes(){
+  const n=act().length;
   const sl=document.getElementById('slots');
-  sl.innerHTML=S.players.map((p,i)=>`
+  sl.innerHTML='<div class="field"><label>¿Cuántos jugáis?</label>'+
+    '<div class="chips">'+[2,3,4].map(k=>
+      `<button class="chip ${n===k?'on':''}" data-cn="${k}">${k}</button>`).join('')+'</div></div>'+
+    S.players.map((p,i)=> i<n ? `
     <div class="slot">
-      <div class="n"><label>Jugador ${i+1}</label><input data-n="${i}" value="${esc(p.name)}" placeholder="Nombre"></div>
-      <div class="h"><label>Hcp</label><input data-h="${i}" type="number" inputmode="numeric" value="${p.hcp}"></div>
-      <button class="x" data-o="${i}" title="Activar o quitar">${p.on?'✓':'＋'}</button>
-    </div>`).join('')+'<p class="note">Toca el botón de la derecha para meter o sacar a un jugador de la partida.</p>';
+      <div class="nn"><label>Jugador ${i+1}</label><input data-n="${i}" value="${esc(p.name)}" placeholder="Nombre"></div>
+      <div class="hh"><label>Hcp</label><input data-h="${i}" type="number" inputmode="numeric" value="${p.hcp}"></div>
+    </div>` : '').join('');
+  sl.querySelectorAll('[data-cn]').forEach(el=>el.onclick=()=>{
+    const k=+el.dataset.cn;
+    S.players.forEach((p,i)=>p.on=i<k);
+    if(!MODES[S.mode] || k<MODES[S.mode].min) S.mode='medal';
+    save(); pintaAjustes(); pintaHoyo(); pintaTarjeta();
+  });
   sl.querySelectorAll('[data-n]').forEach(el=>el.oninput=()=>{S.players[+el.dataset.n].name=el.value;save();pintaHoyo();pintaTarjeta();});
   sl.querySelectorAll('[data-h]').forEach(el=>el.oninput=()=>{S.players[+el.dataset.h].hcp=+el.value||0;save();pintaHoyo();pintaTarjeta();});
-  sl.querySelectorAll('[data-o]').forEach(el=>el.onclick=()=>{
-    const i=+el.dataset.o;
-    if(S.players[i].on && act().length<=2) return;
-    S.players[i].on=!S.players[i].on; save(); pintaAjustes(); pintaHoyo(); pintaTarjeta();
-  });
 
-  document.getElementById('modeBtns').innerHTML=Object.entries(MODES).map(([k,m])=>
+  document.getElementById('modeBtns').innerHTML=modsOk().map(([k,m])=>
     `<button class="mode ${S.mode===k?'on':''}" data-mo="${k}"><b>${m.n}</b><span>${m.d}</span></button>`).join('');
   document.querySelectorAll('[data-mo]').forEach(b=>b.onclick=()=>{
     S.mode=b.dataset.mo; save(); pintaAjustes(); pintaHoyo(); pintaTarjeta();
   });
+  const pb=document.getElementById('pairBox');
+  if(S.mode==='parejas' && act().length===4){
+    const combos=[[[0,1],[2,3]],[[0,2],[1,3]],[[0,3],[1,2]]];
+    const nm=i=>corto({...S.players[i],i}).split(' ')[0];
+    const igual=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
+    pb.innerHTML='<label>Parejas</label><div class="chips wrap">'+combos.map((c,k)=>
+      `<button class="chip ${igual(c,S.pairs)?'on':''}" data-pr="${k}">${esc(nm(c[0][0])+'+'+nm(c[0][1]))} vs ${esc(nm(c[1][0])+'+'+nm(c[1][1]))}</button>`
+    ).join('')+'</div>'+
+    '<p class="note">Mejor bola de cada pareja: 2 puntos. Peor bola: 1. Los empates no puntúan. '+
+    'La pareja que va por detrás juega los <b>verdes</b>: si gana una bola y además es birdie en bruto, suma 1 punto extra por bola.</p>';
+    pb.classList.remove('hidden');
+    pb.querySelectorAll('[data-pr]').forEach(el=>el.onclick=()=>{
+      S.pairs=combos[+el.dataset.pr]; save(); pintaAjustes(); pintaHoyo(); pintaTarjeta();
+    });
+  } else { pb.innerHTML=''; pb.classList.add('hidden'); }
 
+  const nt=document.getElementById('netTxt');
+  if(nt) nt.textContent = S.mode==='medal' ? 'Jugar neto (si no, scratch)' : 'Jugar con hándicap';
   document.getElementById('swNet').className='sw'+(S.net?' on':'');
   document.getElementById('swNet').onclick=()=>{S.net=!S.net;save();pintaAjustes();pintaHoyo();pintaTarjeta();};
 
