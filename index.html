@@ -295,6 +295,13 @@ nav button.on{color:var(--yellow);border-top-color:var(--yellow)}
       <div class="field hidden" id="pairBox" style="margin-top:14px"></div>
       <div class="toggle" style="margin-top:14px">
         <div>
+          <b style="font-weight:600">Hándicap exacto</b>
+          <div class="note" style="margin:2px 0 0">Calcula el de juego con el slope y el valor del campo. Desactívalo si prefieres meter el de juego ya hecho.</div>
+        </div>
+        <button class="sw" id="swHcp" aria-label="Hándicap exacto"><i></i></button>
+      </div>
+      <div class="toggle" style="margin-top:14px">
+        <div>
           <b style="font-weight:600" id="netTxt">Jugar con hándicap</b>
           <div class="note" style="margin:2px 0 0">Reparte los golpes por el hcp de cada hoyo</div>
         </div>
@@ -305,10 +312,18 @@ nav button.on{color:var(--yellow);border-top-color:var(--yellow)}
     <div class="sect-title">Campo</div>
     <div class="card">
       <div class="field">
-        <label for="cName">Nombre de la partida</label>
-        <input id="cName" value="Golf Santander · Amarillas">
+        <label for="cSel">Campo de juego</label>
+        <select id="cSel"></select>
       </div>
-      <p class="note" style="margin-bottom:10px">Par y hcp por hoyo. Compruébalos con la tarjeta del campo en la casa club y corrige lo que baile.</p>
+      <div class="two">
+        <div><label for="cVc">Valor de campo</label><input id="cVc" type="number" step="0.1" inputmode="decimal"></div>
+        <div><label for="cSl">Slope</label><input id="cSl" type="number" inputmode="numeric"></div>
+      </div>
+      <div class="field hidden" id="newBox" style="margin-top:12px">
+        <label for="cNom">Guardar como campo nuevo</label>
+        <div class="two"><input id="cNom" placeholder="Nombre del campo"><button class="chip" id="cSave" style="flex:0 0 100px">Guardar</button></div>
+      </div>
+      <p class="note" id="cInfo"></p>
       <div class="grid18" id="courseGrid"></div>
     </div>
 
@@ -326,6 +341,22 @@ nav button.on{color:var(--yellow);border-top-color:var(--yellow)}
 <div class="saveflag" id="saveflag">Guardado</div>
 
 <script>
+const CAMPOS=[
+  {n:"CB Pal+Fic",vc:68.9,sl:126,par:[5,4,5,4,3,4,3,4,4,4,3,5,3,4,4,3,4,4],si:[12,6,8,4,10,18,14,16,2,7,11,3,1,15,13,17,5,9]},
+  {n:"Lerma",vc:71.6,sl:133,par:[5,4,4,4,3,4,4,5,3,5,4,3,4,3,4,4,5,4],si:[4,2,12,6,14,18,10,16,8,5,11,9,17,7,15,1,13,3]},
+  {n:"Retamares",vc:71,sl:126,par:[4,3,5,4,4,4,5,4,3,5,4,3,5,4,4,4,3,4],si:[1,17,6,9,18,12,13,15,8,10,5,16,7,3,11,4,14,2]},
+  {n:"CB Ol+Pal",vc:72,sl:133,par:[5,4,5,4,3,4,3,4,4,4,3,4,4,5,3,4,5,4],si:[12,6,8,4,10,18,14,16,2,7,9,17,3,5,13,1,11,15]},
+  {n:"Base Rota",vc:70.3,sl:122,par:[4,4,3,4,4,5,4,3,5,4,3,4,4,5,4,5,4,3],si:[17,7,11,1,3,13,5,9,15,6,12,4,10,8,16,14,2,18]},
+  {n:"La Herrería",vc:71.1,sl:144,par:[4,4,3,4,4,4,3,5,4,3,5,4,3,4,5,4,4,4],si:[3,1,17,7,5,11,13,9,15,8,2,10,14,6,16,18,12,4]},
+  {n:"B Santander",vc:71.1,sl:138,par:[5,4,3,4,5,4,3,4,4,4,3,5,4,4,4,4,3,5],si:[8,4,18,2,6,16,12,10,14,3,17,1,15,7,5,11,9,13]},
+  {n:"Olivar",vc:71.5,sl:130,par:[4,5,4,4,3,4,5,3,4,4,3,5,3,4,4,4,5,4],si:[5,9,13,15,17,3,7,11,1,4,14,6,18,2,16,8,12,10]},
+  {n:"Las Lomas",vc:72,sl:143,par:[5,3,4,4,3,4,5,4,4,4,4,4,4,3,4,5,3,5],si:[1,18,3,6,13,9,12,14,16,2,5,7,8,17,4,10,15,11]},
+  {n:"Las Margas",vc:72.6,sl:138,par:[4,4,4,3,4,3,5,3,5,4,4,4,3,4,4,5,3,5],si:[16,10,3,8,5,13,7,12,18,1,6,2,11,14,9,15,17,4]},
+  {n:"La Dehesa",vc:71.5,sl:144,par:[4,5,3,4,4,5,4,4,3,4,5,4,3,4,5,4,3,4],si:[1,11,7,15,9,5,17,3,13,14,16,4,6,8,10,18,2,12]},
+  {n:"VALDELUZ",vc:69.8,sl:128,par:[5,3,4,5,4,4,4,4,3,4,5,3,4,5,3,4,4,4],si:[9,17,11,15,3,1,5,13,7,14,12,4,18,16,8,6,2,10]},
+  {n:"Barberan",vc:71.4,sl:129,par:[4,5,4,3,4,4,5,3,4,4,5,4,3,4,4,5,3,4],si:[3,11,1,5,9,13,15,17,7,4,12,2,6,10,14,16,18,8]},
+  {n:"Encin",vc:71,sl:127,par:[5,4,3,5,3,4,4,4,4,4,5,3,4,4,4,3,4,5],si:[15,5,11,9,7,13,3,17,1,18,8,16,10,4,14,12,2,6]}
+];
 const PAR_DEF = [4,5,3,4,4,3,4,5,4, 4,4,3,5,4,4,3,4,5];
 const SI_DEF  = [7,3,10,15,1,18,11,5,13, 8,14,16,2,4,12,17,6,9];
 
@@ -348,6 +379,7 @@ function fresh(){
   return {
     name:'Golf Santander · Amarillas',
     mode:'nueve', net:true, hole:0, open:null, pairs:[[0,1],[2,3]],
+    campo:6, hcpMode:'exacto', extra:[], vc:71.1, sl:138,
     players:[
       {name:'Jugador 1', hcp:18, on:true},
       {name:'Jugador 2', hcp:18, on:true},
@@ -375,13 +407,34 @@ function save(){
 function load(){
   try{
     const v = localStorage.getItem('golf:partida');
-    if(v){ const p=JSON.parse(v); if(p && p.players){ if(!p.pairs) p.pairs=[[0,1],[2,3]]; return p; } }
+    if(v){
+      const p=JSON.parse(v);
+      if(p && p.players){
+        if(!p.pairs) p.pairs=[[0,1],[2,3]];
+        if(!p.extra) p.extra=[];
+        if(p.open===undefined) p.open=null;
+        // partidas de versiones anteriores guardaban el hándicap de juego ya calculado
+        if(!p.hcpMode){ p.hcpMode='juego'; p.campo='x'; p.vc=p.vc||0; p.sl=p.sl||0; }
+        return p;
+      }
+    }
   }catch(e){}
   return fresh();
 }
 
 /* ---------- lógica ---------- */
 const act = ()=>S.players.map((p,i)=>({...p,i})).filter(p=>p.on);
+const campos = ()=>CAMPOS.concat(S.extra||[]);
+function campoActual(){ return (S.campo==='x'||S.campo==null)?null:campos()[S.campo]; }
+const parTotal = ()=>S.par.reduce((a,b)=>a+b,0);
+// hándicap de juego: exacto x slope/113 + (valor de campo - par)
+function hjuego(pi){
+  const h=+(S.players[pi]?.hcp)||0;
+  if(S.hcpMode!=='exacto') return Math.round(h);
+  const vc=+S.vc, sl=+S.sl;
+  if(!vc||!sl) return Math.round(h);
+  return Math.round(h*sl/113 + (vc - parTotal()));
+}
 function recibidos(hcp,si){
   if(!S.net) return 0;
   const h=Math.round(hcp||0);
@@ -390,7 +443,7 @@ function recibidos(hcp,si){
 }
 function net(hole,pi){
   const g=S.scores[hole][pi]; if(g==null) return null;
-  return g - recibidos(S.players[pi].hcp, S.si[hole]);
+  return g - recibidos(hjuego(pi), S.si[hole]);
 }
 function valores(n){ return n<=2?[3,1] : n===3?[5,3,1] : [4,3,2,1]; }
 
@@ -538,7 +591,7 @@ function pintaHoyo(){
   const bbbOn = S.mode==='bbb';
   act().forEach(p=>{
     const g=S.scores[h][p.i];
-    const rec=recibidos(p.hcp,S.si[h]);
+    const rec=recibidos(hjuego(p.i),S.si[h]);
     const nt=g==null?null:g-rec;
     const d=nt==null?null:nt-S.par[h];
     const rel = d==null?'':`<span class="rel ${d<0?'under':d>0?'over':'even'}">${d>0?'+':''}${d}</span>`;
@@ -549,7 +602,7 @@ function pintaHoyo(){
       <div class="top">
         <div style="min-width:0">
           <div class="pname">${esc(p.name||'Jugador '+(p.i+1))}</div>
-          <div class="ptag">Hcp ${p.hcp} ${rec>0?'<span class="dots">'+'•'.repeat(Math.min(rec,4))+'</span>':rec<0?'<span class="dots">−1</span>':''}</div>
+          <div class="ptag">Hcp ${p.hcp}${S.hcpMode==='exacto'?' · juego '+hjuego(p.i):''} ${rec>0?'<span class="dots">'+'•'.repeat(Math.min(rec,4))+'</span>':rec<0?'<span class="dots">−1</span>':''}</div>
         </div>
         <div class="hpts">${pts}<small>${MODES[S.mode].unit}</small></div>
       </div>
@@ -666,7 +719,7 @@ function pintaTarjeta(){
     let g=0,pt=0,net=0,bru=0,n=0;
     for(let h=0;h<18;h++){
       const v=S.scores[h][p.i];
-      if(v!=null){ g+=v; n++; bru+=v-S.par[h]; net+=(v-recibidos(p.hcp,S.si[h]))-S.par[h]; }
+      if(v!=null){ g+=v; n++; bru+=v-S.par[h]; net+=(v-recibidos(hjuego(p.i),S.si[h]))-S.par[h]; }
       if(pts[h][p.i]!=null) pt+=pts[h][p.i];
     }
     return {...p,g,pt,net,bru,n};
@@ -724,7 +777,7 @@ function pintaTarjeta(){
     const ab=S.open===p.i;
     html+=`<button class="lbrow ${ab?'open':''} ${k===0&&p.pt>0?'first':''}" data-o="${p.i}">`+
       `<span class="pos">${k+1}</span>`+
-      `<span class="who"><b>${esc(corto(p))}</b><small>Hcp ${p.hcp}</small></span>`+
+      `<span class="who"><b>${esc(corto(p))}</b><small>Hcp ${p.hcp}${S.hcpMode==='exacto'?' · juego '+hjuego(p.i):''}</small></span>`+
       `<span class="res">${p.n?Math.round(p.pt*10)/10:'–'}</span>`+
       `<span class="ap">${p.n?bdg(p.net):'<span class="net even">—</span>'}</span>`+
       `<span class="en">${p.n>=18?'F':p.n||'–'}</span>`+
@@ -763,7 +816,7 @@ function pintaAjustes(){
     S.players.map((p,i)=> i<n ? `
     <div class="slot">
       <div class="nn"><label>Jugador ${i+1}</label><input data-n="${i}" value="${esc(p.name)}" placeholder="Nombre"></div>
-      <div class="hh"><label>Hcp</label><input data-h="${i}" type="number" inputmode="numeric" value="${p.hcp}"></div>
+      <div class="hh"><label>${S.hcpMode==='exacto'?'Exacto':'Juego'}</label><input data-h="${i}" type="number" step="0.1" inputmode="decimal" value="${p.hcp}"></div>
     </div>` : '').join('');
   sl.querySelectorAll('[data-cn]').forEach(el=>el.onclick=()=>{
     const k=+el.dataset.cn;
@@ -772,7 +825,7 @@ function pintaAjustes(){
     save(); pintaAjustes(); pintaHoyo(); pintaTarjeta();
   });
   sl.querySelectorAll('[data-n]').forEach(el=>el.oninput=()=>{S.players[+el.dataset.n].name=el.value;save();pintaHoyo();pintaTarjeta();});
-  sl.querySelectorAll('[data-h]').forEach(el=>el.oninput=()=>{S.players[+el.dataset.h].hcp=+el.value||0;save();pintaHoyo();pintaTarjeta();});
+  sl.querySelectorAll('[data-h]').forEach(el=>el.oninput=()=>{S.players[+el.dataset.h].hcp=parseFloat(el.value)||0;save();pintaHoyo();pintaTarjeta();});
 
   document.getElementById('modeBtns').innerHTML=modsOk().map(([k,m])=>
     `<button class="mode ${S.mode===k?'on':''}" data-mo="${k}"><b>${m.n}</b><span>${m.d}</span></button>`).join('');
@@ -797,27 +850,70 @@ function pintaAjustes(){
 
   const nt=document.getElementById('netTxt');
   if(nt) nt.textContent = S.mode==='medal' ? 'Jugar neto (si no, scratch)' : 'Jugar con hándicap';
+  document.getElementById('swHcp').className='sw'+(S.hcpMode==='exacto'?' on':'');
+  document.getElementById('swHcp').onclick=()=>{
+    S.hcpMode = S.hcpMode==='exacto'?'juego':'exacto'; save(); pintaAjustes(); pintaHoyo(); pintaTarjeta();
+  };
   document.getElementById('swNet').className='sw'+(S.net?' on':'');
   document.getElementById('swNet').onclick=()=>{S.net=!S.net;save();pintaAjustes();pintaHoyo();pintaTarjeta();};
 
-  const cn=document.getElementById('cName'); cn.value=S.name;
-  cn.oninput=()=>{S.name=cn.value;save();document.getElementById('courseName').textContent=S.name;};
+  // ---- selector de campo ----
+  const sel=document.getElementById('cSel');
+  sel.innerHTML=campos().map((c,i)=>`<option value="${i}" ${String(S.campo)===String(i)?'selected':''}>${esc(c.n)}</option>`).join('')+
+    `<option value="x" ${S.campo==='x'?'selected':''}>Personalizado…</option>`;
+  sel.onchange=()=>{
+    const v=sel.value;
+    if(v==='x'){ S.campo='x'; }
+    else { const c=campos()[+v]; S.campo=+v; S.par=[...c.par]; S.si=[...c.si]; S.vc=c.vc; S.sl=c.sl; S.name=c.n; }
+    save(); pintaAjustes(); pintaHoyo(); pintaTarjeta();
+  };
+  const vci=document.getElementById('cVc'), sli=document.getElementById('cSl');
+  vci.value=S.vc??''; sli.value=S.sl??'';
+  vci.oninput=()=>{S.vc=parseFloat(vci.value)||0;save();pintaHoyo();pintaTarjeta();};
+  sli.oninput=()=>{S.sl=+sli.value||0;save();pintaHoyo();pintaTarjeta();};
+
+  const nb=document.getElementById('newBox');
+  nb.classList.toggle('hidden', S.campo!=='x');
+  if(S.campo==='x'){
+    const nom=document.getElementById('cNom');
+    document.getElementById('cSave').onclick=()=>{
+      const n=(nom.value||'').trim();
+      if(!n) return;
+      if(!sorted18(S.si)){ alert('Los hándicaps de los hoyos deben ir del 1 al 18 sin repetir.'); return; }
+      S.extra=(S.extra||[]).concat([{n,vc:+S.vc||0,sl:+S.sl||0,par:[...S.par],si:[...S.si]}]);
+      S.campo=campos().length-1; S.name=n;
+      save(); pintaAjustes(); pintaHoyo(); pintaTarjeta();
+    };
+  }
+  const inf=document.getElementById('cInfo');
+  inf.innerHTML = `Par ${parTotal()} · VC ${S.vc||'—'} · slope ${S.sl||'—'}. `+
+    (sorted18(S.si)?'':'<b style="color:#F2938A">Los hándicaps de hoyo deben ir del 1 al 18 sin repetir.</b> ')+
+    'Si editas un par o un hándicap, el campo pasa a personalizado y puedes guardarlo con otro nombre.';
+  document.getElementById('courseName').textContent=S.name;
 
   document.getElementById('courseGrid').innerHTML=S.par.map((p,i)=>`
     <div class="hcell"><div class="hn">Hoyo ${i+1}</div>
       <div class="lb">Par</div><input data-par="${i}" type="number" inputmode="numeric" value="${p}">
       <div class="lb">Hcp</div><input data-si="${i}" type="number" inputmode="numeric" value="${S.si[i]}">
     </div>`).join('');
-  document.querySelectorAll('[data-par]').forEach(el=>el.onchange=()=>{S.par[+el.dataset.par]=+el.value||4;save();pintaHoyo();pintaTarjeta();});
-  document.querySelectorAll('[data-si]').forEach(el=>el.onchange=()=>{S.si[+el.dataset.si]=+el.value||1;save();pintaHoyo();pintaTarjeta();});
+  document.querySelectorAll('[data-par]').forEach(el=>el.onchange=()=>{S.par[+el.dataset.par]=+el.value||4;aCustom();save();pintaAjustes();pintaHoyo();pintaTarjeta();});
+  document.querySelectorAll('[data-si]').forEach(el=>el.onchange=()=>{S.si[+el.dataset.si]=+el.value||1;aCustom();save();pintaAjustes();pintaHoyo();pintaTarjeta();});
 
   document.getElementById('resetBtn').onclick=()=>{
     if(!confirm('Se borran los golpes de los 18 hoyos. ¿Empezamos partida nueva?')) return;
-    const keep={players:S.players,mode:S.mode,net:S.net,par:S.par,si:S.si,name:S.name};
+    const keep={players:S.players,mode:S.mode,net:S.net,par:S.par,si:S.si,name:S.name,
+      campo:S.campo,hcpMode:S.hcpMode,extra:S.extra,vc:S.vc,sl:S.sl,pairs:S.pairs};
     S=Object.assign(fresh(),keep); save(); pintaTodo(); irA('hoyo');
   };
 }
 
+function sorted18(a){
+  const t=[...a].map(Number).sort((x,y)=>x-y);
+  return t.length===18 && t.every((v,i)=>v===i+1);
+}
+function aCustom(){
+  if(S.campo!=='x'){ const c=campoActual(); S.name=(c?c.n:'Campo')+' (editado)'; S.campo='x'; }
+}
 function esc(s){return String(s??'').replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));}
 function pintaTodo(){pintaHoyo();pintaTarjeta();pintaAjustes();}
 function irA(v){
