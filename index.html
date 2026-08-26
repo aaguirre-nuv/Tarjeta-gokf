@@ -188,6 +188,35 @@ main{padding:14px 12px 0;max-width:560px;margin:0 auto}
 .net.even{background:var(--line);color:var(--muted)}
 .net.brt{background:transparent;border:1px solid var(--line);color:var(--text)}
 
+/* estadísticas */
+.stc{padding:13px 14px}
+.sth b{font-family:var(--disp);font-weight:700;font-size:22px;line-height:1.1;display:block}
+.sth small{font-size:11px;color:var(--muted)}
+.stg{display:flex;gap:6px;margin-top:11px}
+.stg.b{margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
+.stg div{flex:1;text-align:center;min-width:0}
+.stg small{display:block;font-size:9px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin-bottom:3px}
+.stg b{font-family:var(--disp);font-weight:700;font-size:19px}
+.stg.b b{font-size:16px}
+.stg b.y{color:var(--yellow)}
+.bar{display:flex;height:20px;border-radius:6px;overflow:hidden;margin-top:12px;gap:1px}
+.bar span{display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;min-width:14px;color:#14261C}
+.s-eag{background:#FFF0A8}.s-bir{background:var(--yellow)}
+.s-par{background:var(--line);color:var(--text)}
+.s-bog{background:rgba(226,72,59,.55);color:#fff}.s-dbl{background:rgba(226,72,59,.85);color:#fff}
+.leg{display:flex;flex-wrap:wrap;gap:9px;margin-top:7px;font-size:10px;color:var(--muted)}
+.leg i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:4px}
+.lbh .hcol,.lbrow .hcol{flex:0 0 40px;text-align:right;font-family:var(--disp);font-weight:700;font-size:15px}
+.lbh .hcol{font-size:10px;font-weight:600;color:var(--muted)}
+.lbrow .hcol.y{color:var(--yellow)}
+.hrow{display:flex;align-items:center;gap:8px;padding:11px 14px;border-bottom:1px solid var(--line)}
+.hrow:last-child{border-bottom:none}
+.hmain{flex:1;min-width:0}
+.hmain b{font-family:var(--disp);font-weight:700;font-size:17px;display:block;line-height:1.15}
+.hmain small{display:block;font-size:11px;color:var(--muted)}
+.hmain small.win{color:var(--yellow);font-weight:600;margin-top:1px}
+.hdel{flex:0 0 32px;height:32px;border-radius:9px;background:var(--surface2);border:1px solid var(--line);color:var(--muted);font-size:17px}
+
 /* ajustes */
 .card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:12px}
 .field{margin-bottom:12px}
@@ -220,8 +249,14 @@ label{display:block;font-size:12px;letter-spacing:.1em;text-transform:uppercase;
 }
 .chip.on{background:var(--yellow);color:#14261C;border-color:var(--yellow)}
 .chips.wrap .chip{flex:1 1 100%;font-size:14px}
+.chips.wrap2{flex-wrap:wrap}
+.chip.sm{flex:0 0 auto;padding:8px 12px;font-size:14px}
+.chip.sm em{font-style:normal;color:var(--muted);font-size:12px}
+.chip.sm:active{background:var(--line)}
 .bbbrow{margin-bottom:14px}
 .bbbrow .lab{font-family:var(--disp);font-weight:600;letter-spacing:.1em;text-transform:uppercase;font-size:12px;color:var(--muted);margin-bottom:6px}
+.primary{width:100%;padding:14px;border-radius:12px;background:var(--yellow);color:#14261C;
+  font-family:var(--disp);font-weight:700;font-size:18px;letter-spacing:.02em}
 .danger{width:100%;padding:13px;border-radius:12px;background:transparent;border:1px solid var(--flag);color:#F2938A;font-weight:600}
 .grid18{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .hcell{background:var(--surface2);border:1px solid var(--line);border-radius:10px;padding:8px}
@@ -284,6 +319,14 @@ nav button.on{color:var(--yellow);border-top-color:var(--yellow)}
     <p class="note" id="cardLegend"></p>
   </section>
 
+  <!-- ===== VISTA ESTADÍSTICAS ===== -->
+  <section id="view-stats" class="hidden">
+    <div class="sect-title">Esta partida</div>
+    <div id="statNow"></div>
+    <div class="sect-title">Histórico</div>
+    <div id="statHist"></div>
+  </section>
+
   <!-- ===== VISTA AJUSTES ===== -->
   <section id="view-ajustes" class="hidden">
     <div class="sect-title">Jugadores</div>
@@ -328,7 +371,9 @@ nav button.on{color:var(--yellow);border-top-color:var(--yellow)}
     </div>
 
     <div class="card">
-      <button class="danger" id="resetBtn">Empezar partida nueva</button>
+      <button class="primary" id="saveBtn">Guardar partida y empezar otra</button>
+      <p class="note">Se archiva en Stats con los golpes hoyo a hoyo, y se conservan campo, jugadores y modalidad para la siguiente.</p>
+      <button class="danger" id="resetBtn" style="margin-top:12px">Descartar sin guardar</button>
     </div>
   </section>
 </main>
@@ -336,11 +381,35 @@ nav button.on{color:var(--yellow);border-top-color:var(--yellow)}
 <nav>
   <button data-v="hoyo" class="on">Hoyo</button>
   <button data-v="tarjeta">Tarjeta</button>
+  <button data-v="stats">Stats</button>
   <button data-v="ajustes">Ajustes</button>
 </nav>
 <div class="saveflag" id="saveflag">Guardado</div>
 
 <script>
+/* ---------- almacén: cuatro cosas independientes ----------
+   golf:partida    la partida en curso
+   golf:jugadores  tus jugadores habituales con su último hándicap
+   golf:campos     los campos que añadas tú
+   golf:historico  las partidas terminadas                          */
+function dbGet(k,def){ try{ const v=localStorage.getItem('golf:'+k); return v?JSON.parse(v):def; }catch(e){ return def; } }
+function dbSet(k,v){ try{ localStorage.setItem('golf:'+k,JSON.stringify(v)); }catch(e){} }
+let ROSTER=[], HIST=[], EXTRA=[];
+function cargaAlmacen(){
+  ROSTER=dbGet('jugadores',[]); HIST=dbGet('historico',[]); EXTRA=dbGet('campos',[]);
+}
+function syncRoster(){
+  let ch=false;
+  act().forEach(p=>{
+    const n=(p.name||'').trim();
+    if(!n || /^jugador\s*\d*$/i.test(n)) return;
+    const k=ROSTER.findIndex(r=>r.n.toLowerCase()===n.toLowerCase());
+    if(k<0){ ROSTER.push({n,h:p.hcp,m:S.hcpMode}); ch=true; }
+    else if(ROSTER[k].h!==p.hcp || ROSTER[k].m!==S.hcpMode){ ROSTER[k]={n,h:p.hcp,m:S.hcpMode}; ch=true; }
+  });
+  if(ch) dbSet('jugadores',ROSTER);
+}
+
 const CAMPOS=[
   {n:"CB Pal+Fic",vc:68.9,sl:126,par:[5,4,5,4,3,4,3,4,4,4,3,5,3,4,4,3,4,4],si:[12,6,8,4,10,18,14,16,2,7,11,3,1,15,13,17,5,9]},
   {n:"Lerma",vc:71.6,sl:133,par:[5,4,4,4,3,4,4,5,3,5,4,3,4,3,4,4,5,4],si:[4,2,12,6,14,18,10,16,8,5,11,9,17,7,15,1,13,3]},
@@ -379,7 +448,7 @@ function fresh(){
   return {
     name:'Golf Santander · Amarillas',
     mode:'nueve', net:true, hole:0, open:null, pairs:[[0,1],[2,3]],
-    campo:6, hcpMode:'exacto', extra:[], vc:71.1, sl:138,
+    campo:6, hcpMode:'exacto', vc:71.1, sl:138,
     players:[
       {name:'Jugador 1', hcp:18, on:true},
       {name:'Jugador 2', hcp:18, on:true},
@@ -392,9 +461,10 @@ function fresh(){
   };
 }
 
-/* ---------- guardado (local, funciona sin conexión) ---------- */
+/* ---------- guardado de la partida en curso ---------- */
 let saveT=null;
 function save(){
+  syncRoster();
   clearTimeout(saveT);
   saveT=setTimeout(()=>{
     try{
@@ -411,9 +481,7 @@ function load(){
       const p=JSON.parse(v);
       if(p && p.players){
         if(!p.pairs) p.pairs=[[0,1],[2,3]];
-        if(!p.extra) p.extra=[];
         if(p.open===undefined) p.open=null;
-        // partidas de versiones anteriores guardaban el hándicap de juego ya calculado
         if(!p.hcpMode){ p.hcpMode='juego'; p.campo='x'; p.vc=p.vc||0; p.sl=p.sl||0; }
         return p;
       }
@@ -424,7 +492,7 @@ function load(){
 
 /* ---------- lógica ---------- */
 const act = ()=>S.players.map((p,i)=>({...p,i})).filter(p=>p.on);
-const campos = ()=>CAMPOS.concat(S.extra||[]);
+const campos = ()=>CAMPOS.concat(EXTRA);
 function campoActual(){ return (S.campo==='x'||S.campo==null)?null:campos()[S.campo]; }
 const parTotal = ()=>S.par.reduce((a,b)=>a+b,0);
 // hándicap de juego: exacto x slope/113 + (valor de campo - par)
@@ -572,6 +640,50 @@ function golpesTot(pi){
   let g=0,n=0;
   for(let h=0;h<18;h++) if(S.scores[h][pi]!=null){ g+=S.scores[h][pi]; n++; }
   return {g,n};
+}
+
+/* ---------- métricas ---------- */
+// puntos stableford netos, se calculan siempre como referencia
+function stbHoyo(pi,h){
+  const v=S.scores[h][pi]; if(v==null) return null;
+  return Math.max(0, S.par[h]+2-(v-recibidos(hjuego(pi),S.si[h])));
+}
+function metricas(pi){
+  const m={g:0,n:0,ida:0,vta:0,bru:0,net:0,stb:0,eag:0,bir:0,par:0,bog:0,dbl:0,p3:[0,0],p4:[0,0],p5:[0,0]};
+  for(let h=0;h<18;h++){
+    const v=S.scores[h][pi]; if(v==null) continue;
+    m.n++; m.g+=v; if(h<9) m.ida+=v; else m.vta+=v;
+    const d=v-S.par[h];
+    m.bru+=d; m.net+=(v-recibidos(hjuego(pi),S.si[h]))-S.par[h];
+    m.stb+=stbHoyo(pi,h);
+    if(d<=-2) m.eag++; else if(d===-1) m.bir++; else if(d===0) m.par++; else if(d===1) m.bog++; else m.dbl++;
+    const k=S.par[h]<=3?'p3':S.par[h]===4?'p4':'p5';
+    m[k][0]+=d; m[k][1]++;
+  }
+  return m;
+}
+function resumenPartida(){
+  const A=act();
+  const r={fecha:new Date().toISOString().slice(0,10), campo:S.name, par:parTotal(),
+    modo:S.mode, net:S.net, hcpMode:S.hcpMode, vc:S.vc, sl:S.sl,
+    parCampo:[...S.par], siCampo:[...S.si], scores:S.scores.map(x=>[...x]),
+    jug:A.map(p=>{ const m=metricas(p.i); return {n:corto(p),hcp:p.hcp,hj:hjuego(p.i),
+      g:m.g,hoyos:m.n,bru:m.bru,net:m.net,stb:m.stb,ida:m.ida,vta:m.vta,
+      eag:m.eag,bir:m.bir,pares:m.par,bog:m.bog,dbl:m.dbl}; })};
+  if(S.mode==='parejas' && A.length===4){
+    const {tot,ac}=parejasCalc();
+    r.parejas=[0,1].map(k=>({n:nombrePareja(k),pts:ac[k],mb:tot[k].mb,pb:tot[k].pb,ex:tot[k].ex,gan:tot[k].gan}));
+  }
+  const {t}=totales();
+  r.jug.forEach((j,k)=>j.pts=Math.round((t[A[k].i]||0)*10)/10);
+  return r;
+}
+function guardaPartida(){
+  const hay=act().some(p=>metricas(p.i).n>0);
+  if(!hay){ alert('Esta partida no tiene golpes que guardar.'); return false; }
+  HIST=[resumenPartida()].concat(HIST);
+  dbSet('historico',HIST);
+  return true;
 }
 
 /* ---------- pintar ---------- */
@@ -807,9 +919,86 @@ function pintaTarjeta(){
     '«Al par» es el neto sobre el par del campo, y «En» los hoyos jugados.';
 }
 
+function pintaStats(){
+  const cont=document.getElementById('statNow');
+  if(!cont) return;
+  const A=act().map(p=>({...p,m:metricas(p.i)})).filter(p=>p.m.n>0);
+  const sp=v=>(v>0?'+':v===0?'E':'')+(v!==0?v:'');
+  const med=(a)=>a[1]?(a[0]/a[1]>=0?'+':'')+(a[0]/a[1]).toFixed(1):'—';
+  if(!A.length){
+    cont.innerHTML='<div class="card"><p class="note" style="margin:0">En cuanto metas golpes aparecen aquí las estadísticas de la vuelta.</p></div>';
+  } else {
+    cont.innerHTML=A.sort((a,b)=>b.m.stb-a.m.stb).map(p=>{
+      const m=p.m, tot=m.n||1;
+      const seg=[['eag',m.eag,'Eagle+'],['bir',m.bir,'Birdie'],['par',m.par,'Par'],['bog',m.bog,'Bogey'],['dbl',m.dbl,'Doble+']];
+      return `<div class="card stc">
+        <div class="sth"><b>${esc(corto(p))}</b><small>${m.n} hoyos · hcp juego ${hjuego(p.i)}</small></div>
+        <div class="stg">
+          <div><small>Golpes</small><b>${m.g}</b></div>
+          <div><small>Bruto</small><b>${sp(m.bru)}</b></div>
+          <div><small>Neto</small><b class="y">${sp(m.net)}</b></div>
+          <div><small>Stbl</small><b>${m.stb}</b></div>
+        </div>
+        <div class="bar">${seg.filter(x=>x[1]).map(x=>
+          `<span class="s-${x[0]}" style="flex:${x[1]}">${x[1]}</span>`).join('')}</div>
+        <div class="leg">${seg.filter(x=>x[1]).map(x=>
+          `<span><i class="s-${x[0]}"></i>${x[2]} ${x[1]}</span>`).join('')}</div>
+        <div class="stg b">
+          <div><small>Ida</small><b>${m.ida||'—'}</b></div>
+          <div><small>Vuelta</small><b>${m.vta||'—'}</b></div>
+          <div><small>Par 3</small><b>${med(m.p3)}</b></div>
+          <div><small>Par 4</small><b>${med(m.p4)}</b></div>
+          <div><small>Par 5</small><b>${med(m.p5)}</b></div>
+        </div></div>`;
+    }).join('');
+  }
+
+  const hc=document.getElementById('statHist');
+  if(!HIST.length){
+    hc.innerHTML='<div class="card"><p class="note" style="margin:0">Todavía no hay partidas guardadas. '+
+      'Cuando termines, en Ajustes pulsa <b>Guardar partida</b> y se archiva aquí con todos los golpes hoyo a hoyo.</p></div>';
+    return;
+  }
+  // agregado por jugador a lo largo del histórico
+  const ag={};
+  HIST.forEach(r=>r.jug.forEach(j=>{
+    if(j.hoyos<18) return;
+    const a=ag[j.n]||(ag[j.n]={p:0,g:0,mejor:1e9,stb:0,mstb:0,bir:0,net:0});
+    a.p++; a.g+=j.g; a.stb+=j.stb; a.bir+=j.bir+j.eag; a.net+=j.net;
+    if(j.g<a.mejor) a.mejor=j.g;
+    if(j.stb>a.mstb) a.mstb=j.stb;
+  }));
+  const filas=Object.entries(ag).sort((a,b)=>b[1].mstb-a[1].mstb);
+  let h='';
+  if(filas.length) h+='<div class="card" style="padding:10px 0 2px"><div class="lbh">'+
+    '<span class="who">Vueltas completas</span><span class="hcol">Part</span><span class="hcol">Media</span>'+
+    '<span class="hcol">Mejor</span><span class="hcol">Stbl</span></div>'+
+    filas.map(([n,a])=>`<div class="lbrow" style="padding:10px">
+      <span class="who"><b style="font-size:17px">${esc(n)}</b><small>${a.bir} birdies o mejor</small></span>
+      <span class="hcol">${a.p}</span><span class="hcol">${(a.g/a.p).toFixed(1)}</span>
+      <span class="hcol">${a.mejor}</span><span class="hcol y">${a.mstb}</span></div>`).join('')+'</div>';
+
+  h+='<div class="card" style="padding:6px 0 0">'+HIST.map((r,i)=>{
+    const ord=[...r.jug].sort((a,b)=>b.stb-a.stb);
+    const g=r.parejas ? (r.parejas[0].pts===r.parejas[1].pts?'Empate':
+        (r.parejas[0].pts>r.parejas[1].pts?r.parejas[0]:r.parejas[1]).n+' '+Math.max(r.parejas[0].pts,r.parejas[1].pts)+'-'+Math.min(r.parejas[0].pts,r.parejas[1].pts))
+      : ord[0].n+' · '+ord[0].stb+' pts';
+    return `<div class="hrow">
+      <div class="hmain"><b>${esc(r.campo)}</b><small>${r.fecha} · ${MODES[r.modo]?MODES[r.modo].n:r.modo} · ${r.jug.length} jugadores</small>
+        <small class="win">${esc(g)}</small></div>
+      <button class="hdel" data-del="${i}" aria-label="Borrar partida">×</button></div>`;
+  }).join('')+'</div>';
+  hc.innerHTML=h;
+  hc.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{
+    if(!confirm('¿Borrar esta partida del histórico?')) return;
+    HIST.splice(+b.dataset.del,1); dbSet('historico',HIST); pintaStats();
+  });
+}
+
 function pintaAjustes(){
   const n=act().length;
   const sl=document.getElementById('slots');
+  const libres=ROSTER.filter(r=>!act().some(p=>(p.name||'').trim().toLowerCase()===r.n.toLowerCase()));
   sl.innerHTML='<div class="field"><label>¿Cuántos jugáis?</label>'+
     '<div class="chips">'+[2,3,4].map(k=>
       `<button class="chip ${n===k?'on':''}" data-cn="${k}">${k}</button>`).join('')+'</div></div>'+
@@ -817,7 +1006,17 @@ function pintaAjustes(){
     <div class="slot">
       <div class="nn"><label>Jugador ${i+1}</label><input data-n="${i}" value="${esc(p.name)}" placeholder="Nombre"></div>
       <div class="hh"><label>${S.hcpMode==='exacto'?'Exacto':'Juego'}</label><input data-h="${i}" type="number" step="0.1" inputmode="decimal" value="${p.hcp}"></div>
-    </div>` : '').join('');
+    </div>` : '').join('')+
+    (libres.length?'<div class="field" style="margin-top:2px"><label>Tus jugadores</label><div class="chips wrap2">'+
+      libres.map((r,k)=>`<button class="chip sm" data-ros="${k}">${esc(r.n)} <em>${r.h}</em></button>`).join('')+
+      '</div><p class="note">Toca uno para meterlo en la partida. Se guardan solos con el último hándicap que les pongas.</p></div>':'');
+  sl.querySelectorAll('[data-ros]').forEach(el=>el.onclick=()=>{
+    const r=libres[+el.dataset.ros];
+    let k=S.players.findIndex((p,i)=>i<n && (!(p.name||'').trim() || /^jugador\s*\d*$/i.test(p.name)));
+    if(k<0) k=n-1;
+    S.players[k]={...S.players[k],name:r.n,hcp:r.h,on:true};
+    save(); pintaAjustes(); pintaHoyo(); pintaTarjeta();
+  });
   sl.querySelectorAll('[data-cn]').forEach(el=>el.onclick=()=>{
     const k=+el.dataset.cn;
     S.players.forEach((p,i)=>p.on=i<k);
@@ -880,7 +1079,8 @@ function pintaAjustes(){
       const n=(nom.value||'').trim();
       if(!n) return;
       if(!sorted18(S.si)){ alert('Los hándicaps de los hoyos deben ir del 1 al 18 sin repetir.'); return; }
-      S.extra=(S.extra||[]).concat([{n,vc:+S.vc||0,sl:+S.sl||0,par:[...S.par],si:[...S.si]}]);
+      EXTRA=EXTRA.concat([{n,vc:+S.vc||0,sl:+S.sl||0,par:[...S.par],si:[...S.si]}]);
+      dbSet('campos',EXTRA);
       S.campo=campos().length-1; S.name=n;
       save(); pintaAjustes(); pintaHoyo(); pintaTarjeta();
     };
@@ -899,11 +1099,13 @@ function pintaAjustes(){
   document.querySelectorAll('[data-par]').forEach(el=>el.onchange=()=>{S.par[+el.dataset.par]=+el.value||4;aCustom();save();pintaAjustes();pintaHoyo();pintaTarjeta();});
   document.querySelectorAll('[data-si]').forEach(el=>el.onchange=()=>{S.si[+el.dataset.si]=+el.value||1;aCustom();save();pintaAjustes();pintaHoyo();pintaTarjeta();});
 
+  document.getElementById('saveBtn').onclick=()=>{
+    if(!guardaPartida()) return;
+    nuevaPartida(); irA('stats');
+  };
   document.getElementById('resetBtn').onclick=()=>{
-    if(!confirm('Se borran los golpes de los 18 hoyos. ¿Empezamos partida nueva?')) return;
-    const keep={players:S.players,mode:S.mode,net:S.net,par:S.par,si:S.si,name:S.name,
-      campo:S.campo,hcpMode:S.hcpMode,extra:S.extra,vc:S.vc,sl:S.sl,pairs:S.pairs};
-    S=Object.assign(fresh(),keep); save(); pintaTodo(); irA('hoyo');
+    if(!confirm('Se borran los golpes de los 18 hoyos sin guardarlos. ¿Seguimos?')) return;
+    nuevaPartida(); irA('hoyo');
   };
 }
 
@@ -914,17 +1116,34 @@ function sorted18(a){
 function aCustom(){
   if(S.campo!=='x'){ const c=campoActual(); S.name=(c?c.n:'Campo')+' (editado)'; S.campo='x'; }
 }
+function nuevaPartida(){
+  const keep={players:S.players,mode:S.mode,net:S.net,par:S.par,si:S.si,name:S.name,
+    campo:S.campo,hcpMode:S.hcpMode,vc:S.vc,sl:S.sl,pairs:S.pairs};
+  S=Object.assign(fresh(),keep); save(); pintaTodo();
+}
 function esc(s){return String(s??'').replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));}
-function pintaTodo(){pintaHoyo();pintaTarjeta();pintaAjustes();}
+function pintaTodo(){pintaHoyo();pintaTarjeta();pintaAjustes();pintaStats();}
 function irA(v){
-  ['hoyo','tarjeta','ajustes'].forEach(x=>document.getElementById('view-'+x).classList.toggle('hidden',x!==v));
+  ['hoyo','tarjeta','stats','ajustes'].forEach(x=>document.getElementById('view-'+x).classList.toggle('hidden',x!==v));
   document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
-  document.getElementById('holebar').classList.toggle('hidden',v==='ajustes');
+  document.getElementById('holebar').classList.toggle('hidden',v==='ajustes'||v==='stats');
+  if(v==='stats') pintaStats();
   window.scrollTo(0,0);
 }
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>irA(b.dataset.v));
 document.getElementById('prevH').onclick=()=>{if(S.hole>0){S.hole--;save();pintaHoyo();pintaTarjeta();}};
 document.getElementById('nextH').onclick=()=>{if(S.hole<17){S.hole++;save();pintaHoyo();pintaTarjeta();}};
 
-S=load(); pintaTodo();
+cargaAlmacen();
+(()=>{
+  S=load();
+  // los campos personalizados vivían dentro de la partida: se mudan al almacén
+  if(S.extra && S.extra.length){
+    const n=EXTRA.map(c=>c.n);
+    EXTRA=EXTRA.concat(S.extra.filter(c=>!n.includes(c.n)));
+    dbSet('campos',EXTRA);
+  }
+  delete S.extra;
+  pintaTodo();
+})();
 </script>
